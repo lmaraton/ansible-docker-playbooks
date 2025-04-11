@@ -1,0 +1,25 @@
+---
+- name: Déployer WordPress avec Docker Compose
+hosts: ubuntu
+become: yes
+vars:
+wp_dir: /opt/wordpress
+mysql_root_password: rootpassword
+mysql_database: wordpress
+mysql_user: wpuser
+mysql_password: wppassword
+tasks:
+- name: Créer le répertoire pour WordPress
+file:
+path: "{{ wp_dir }}"
+state: directory
+mode: '0755'
+- name: Créer docker-compose.yml
+template:
+src: docker-compose.yml.j2
+dest: "{{ wp_dir }}/docker-compose.yml"
+mode: '0644'
+- name: Lancer WordPress avec Docker Compose
+docker_compose:
+project_src: "{{ wp_dir }}"
+state: present

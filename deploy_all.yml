@@ -1,0 +1,76 @@
+---
+- name: Déployer Docker et WordPress
+hosts: ubuntu
+become: yes
+vars:
+wp_dir: /opt/wordpress
+mysql_root_password: rootpassword
+mysql_database: wordpress
+mysql_user: wpuser
+mysql_password: wppassword
+tasks:
+# Installation de Docker
+- name: Installer les dépendances
+apt:
+name:
+- apt-transport-https
+- ca-certificates
+- curl
+- gnupg
+- lsb-release
+state: present
+update_cache: yes
+- name: Ajouter la clé GPG Docker
+apt_key:
+url: https://download.docker.com/linux/ubuntu/gpg
+state: present
+- name: Ajouter le dépôt Docker
+apt_repository:
+repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{
+ansible_distribution_release }} stable"
+state: present
+- name: Installer Docker Engine
+apt:
+name:
+- docker-ce
+- docker-ce-cli
+- containerd.io
+state: present
+update_cache: yes
+- name: Installer Docker Compose
+get_url:
+url:
+https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-
+linux-x86_64
+dest: /usr/local/bin/docker-compose
+mode: '0755'
+- name: Ajouter l'utilisateur au groupe docker
+user:
+name: "{{ ansible_user }}"
+groups: docker
+append: yes
+- name: Démarrer et activer le service Docker
+service:
+name: docker
+state: started
+enabled: yes
+# Déploiement de WordPress
+- name: Créer le répertoire pour WordPress
+file:
+path: "{{ wp_dir }}"
+state: directory
+mode: '0755'
+- name: Créer docker-compose.yml
+template:
+src: docker-compose.yml.j2
+dest: "{{ wp_dir }}/docker-compose.yml"
+mode: '0644'
+- name: Lancer WordPress avec Docker Compose
+shell: cd {{ wp_dir }} && docker-compose up -d
+args:
+creates: "{{ wp_dir }}/.deployed"
+- name: Marquer comme déployé
+file:
+path: "{{ wp_dir }}/.deployed"
+state: touch
+mode: '0644'
